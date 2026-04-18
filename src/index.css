@@ -1,0 +1,624 @@
+/* ─── BakeBook Design System ─── */
+:root {
+  --bake-brown:       #C8A97E;
+  --bake-brown-dark:  #9E7B55;
+  --bake-green:       #2E7D52;
+  --bake-green-light: #3D9E6A;
+  --bake-purple:      #7B5EA7;
+  --bake-bg:          #F2F0EB;
+  --bake-card:        #ffffff;
+  --bake-red:         #E24B4A;
+  --bake-amber:       #EF9F27;
+  --bake-text:        #1a1a1a;
+  --bake-secondary:   #888888;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--bake-bg);
+  color: var(--bake-text);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* ─── App Shell ─── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;
+  max-width: 430px;
+  margin: 0 auto;
+  background: var(--bake-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Page ─── */
+.page {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(72px + var(--safe-bottom));
+}
+
+/* ─── Tab Bar ─── */
+.tab-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  display: flex;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(0,0,0,0.08);
+  padding-bottom: var(--safe-bottom);
+  z-index: 100;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 0 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.12s ease;
+}
+
+.tab-btn:active { transform: scale(0.92); }
+
+.tab-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+.tab-btn.active svg { stroke-width: 2.5; }
+
+.tab-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bake-secondary);
+  letter-spacing: 0.2px;
+}
+
+.tab-btn.active .tab-label { color: inherit; }
+
+.tab-badge {
+  position: absolute;
+  top: 7px;
+  right: calc(50% - 16px);
+  width: 8px; height: 8px;
+  background: var(--bake-red);
+  border-radius: 50%;
+  border: 1.5px solid white;
+}
+
+/* ─── Header Banners ─── */
+.hero-header {
+  padding: calc(var(--safe-top) + 52px) 24px 26px;
+  border-radius: 0 0 28px 28px;
+  color: white;
+}
+
+/* ─── Cards ─── */
+.card {
+  background: var(--bake-card);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* ─── Stat Cards ─── */
+.stat-row { display: flex; gap: 8px; }
+
+.stat-card {
+  flex: 1;
+  background: white;
+  border-radius: 13px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--bake-secondary);
+  margin-top: 2px;
+}
+
+/* ─── Tag Badge ─── */
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+/* ─── Search ─── */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-top: 14px;
+}
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  color: var(--bake-text);
+}
+
+.search-bar input::placeholder { color: #aaa; }
+
+/* ─── Category Pills ─── */
+.pill-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 14px 20px;
+  scrollbar-width: none;
+}
+.pill-row::-webkit-scrollbar { display: none; }
+
+.pill {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+/* ─── Recipe Card Row ─── */
+.recipe-card-row {
+  display: flex;
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.recipe-card-row:active { transform: scale(0.98); box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+
+.recipe-card-emoji {
+  width: 86px;
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  flex-shrink: 0;
+}
+
+.recipe-card-info {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recipe-card-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.recipe-card-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--bake-secondary);
+  align-items: center;
+}
+
+.recipe-card-meta span { display: flex; align-items: center; gap: 3px; }
+.recipe-card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+
+/* ─── Section Label ─── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bake-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ─── FAB ─── */
+.fab {
+  position: fixed;
+  bottom: calc(80px + var(--safe-bottom));
+  right: 20px;
+  width: 52px; height: 52px;
+  border-radius: 26px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 90;
+  transition: transform 0.12s ease;
+  color: white;
+}
+.fab:active { transform: scale(0.92); }
+
+/* ─── Section List ─── */
+.list-section { display: flex; flex-direction: column; gap: 12px; padding: 12px 20px; }
+
+/* ─── Progress Bar ─── */
+.progress-bar-track {
+  background: #F0EBE3;
+  border-radius: 4px;
+  overflow: hidden;
+  height: 6px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* ─── Timer Ring ─── */
+.timer-ring-svg { transform: rotate(-90deg); }
+
+/* ─── Form Inputs ─── */
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
+
+.bake-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #F7F5F2;
+  border: 1.5px solid #EDE8E0;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  color: var(--bake-text);
+}
+.bake-input:focus { border-color: var(--bake-brown); }
+
+textarea.bake-input { resize: vertical; min-height: 64px; line-height: 1.5; }
+
+select.bake-input { cursor: pointer; }
+
+/* ─── Primary Button ─── */
+.primary-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.primary-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+/* ─── Star Rating ─── */
+.star-rating { display: flex; gap: 4px; }
+.star { font-size: 24px; cursor: pointer; transition: opacity 0.1s; }
+.star.dim { opacity: 0.25; }
+.star.small { font-size: 13px; }
+
+/* ─── Quantity Stepper ─── */
+.qty-stepper { display: flex; align-items: center; gap: 16px; }
+.qty-btn {
+  width: 36px; height: 36px;
+  border-radius: 18px;
+  border: 1.5px solid var(--bake-brown);
+  background: white;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+  color: var(--bake-brown);
+}
+.qty-btn:active { background: var(--bake-brown); color: white; }
+.qty-value { font-size: 20px; font-weight: 800; }
+
+/* ─── Toggle ─── */
+.toggle-wrapper { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toggle {
+  position: relative;
+  width: 48px; height: 28px;
+  background: #ddd;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--bake-green-light); }
+.toggle-knob {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 22px; height: 22px;
+  background: white;
+  border-radius: 50%;
+  transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle.on .toggle-knob { left: 23px; }
+
+/* ─── Modal Sheet ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+.modal-sheet {
+  width: 100%;
+  background: var(--bake-bg);
+  border-radius: 24px 24px 0 0;
+  max-height: 92dvh;
+  overflow-y: auto;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ─── Back button ─── */
+.back-btn {
+  width: 36px; height: 36px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.28);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ─── Detail Page ─── */
+.detail-hero {
+  padding: calc(var(--safe-top) + 52px) 24px 20px;
+  position: relative;
+}
+
+/* ─── Revenue row ─── */
+.revenue-block {
+  background: #EAFBF0;
+  border-radius: 12px;
+  padding: 12px;
+}
+.revenue-row {
+  display: flex; justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 13px;
+  color: #2E7D52;
+}
+.revenue-row .val { font-weight: 700; }
+
+/* ─── Scan progress ─── */
+.scan-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px;
+  background: #F4FBF7;
+  border-radius: 14px;
+  border: 2px dashed var(--bake-green-light);
+  cursor: pointer;
+  text-align: center;
+}
+.scan-progress-bar {
+  height: 6px;
+  background: #C8E6D4;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.scan-progress-fill {
+  height: 100%;
+  background: #27500A;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* ─── Inventory item card ─── */
+.inv-card {
+  background: white;
+  border-radius: 16px;
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.12s;
+  text-decoration: none;
+  color: inherit;
+}
+.inv-card:active { transform: scale(0.98); }
+
+/* ─── Emoji Circle ─── */
+.emoji-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30%;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+/* ─── Alert Banner ─── */
+.alert-banner {
+  background: #FCEBEB;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+/* ─── Journal Card ─── */
+.journal-card {
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.12s;
+  text-decoration: none;
+  color: inherit;
+}
+.journal-card:active { transform: scale(0.98); }
+
+.journal-card-images {
+  display: flex;
+  height: 100px;
+  gap: 3px;
+}
+.journal-img-main {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44px;
+}
+.journal-img-side {
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.journal-img-side-cell {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+
+.journal-card-body { padding: 14px; }
+
+/* ─── Slider ─── */
+input[type=range] {
+  width: 100%;
+  accent-color: var(--bake-brown);
+}
+
+/* ─── Grid ─── */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+/* ─── Photo grid ─── */
+.photo-grid-cell {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+/* ─── Info Row ─── */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 13px;
+}
+.info-label { color: var(--bake-secondary); }
+.info-value { font-weight: 700; }
+
+/* ─── Divider ─── */
+.divider { height: 1px; background: rgba(0,0,0,0.07); margin: 2px 0; }
+
+/* ─── Insufficient banner ─── */
+.insufficient-banner {
+  background: #FCEBEB;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+/* ─── Step card ─── */
+.step-card {
+  background: white;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+}
+.step-num {
+  width: 26px; height: 26px;
+  border-radius: 13px;
+  background: var(--bake-brown);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ─── Timer page ─── */
+.timer-page {
+  background: #1C1C1E;
+  min-height: 100%;
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+.timer-preset-btn {
+  flex: 1;
+  background: #2C2C2E;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 11px 0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.timer-preset-btn:active { background: #3A3A3C; }
+.circle-btn {
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  cursor: pointer; color: white;
+  transition: opacity 0.12s;
+}
+.circle-btn:active { opacity: 0.75; }
