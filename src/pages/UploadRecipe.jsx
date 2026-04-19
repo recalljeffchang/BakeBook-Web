@@ -144,20 +144,93 @@ const SCAN_STEPS = [
 // ─── Component ─────────────────────────────────────────────────────────────────
 export default function UploadRecipe({ onBack }) {
   const { dispatch } = useApp();
-  const [mode, setMode] = useState('scan');
+  const [mode, setMode] = useState('scan'); // scan | ultra | manual
 
   // API key state (persisted in localStorage)
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('bb_gemini_key') || '');
   const [showKeyInput, setShowKeyInput] = useState(() => !localStorage.getItem('bb_gemini_key'));
 
   // Scan state
-  const [scanState, setScanState] = useState('idle'); // idle | scanning | done | error
-  const [scanStep, setScanStep] = useState(0);
+  const [scanState, setScanState]   = useState('idle');
+  const [scanStep, setScanStep]     = useState(0);
   const [currentModel, setCurrentModel] = useState('');
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [aiResult, setAiResult] = useState(null);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [aiResult, setAiResult]     = useState(null);
+  const [errorMsg, setErrorMsg]     = useState('');
   const fileInputRef = useRef(null);
+
+  // Ultra JSON paste state
+  const [ultraRaw, setUltraRaw]     = useState('');
+  const [ultraParsed, setUltraParsed] = useState(null);
+  const [ultraError, setUltraError] = useState('');
+  const [copied, setCopied]         = useState(false);
+
+  const ULTRA_PROMPT = `你是一位專業的烘焙食譜辨識助手。請仔細分析我附上的這張圖片（食譜書、手寫食譜、截圖或食物照片），並準確提取所有資訊。
+
+請「只」以純 JSON 格式回覆，不要有任何 markdown 符號（不要 \`\`\`json）、不要任何解釋文字，直接輸出 JSON 物件：
+{
+  "name": "食譜名稱（繁體中文）",
+  "subtitle": "副標題或簡短描述（20字以內）",
+  "category": "麵包 或 蛋糕 或 餅乾 或 點心",
+  "difficulty": "入門 或 中等 或 進階",
+  "emoji": "最適合的食物 emoji（1個）",
+  "totalMinutes": 總製作時間分鐘（數字）,
+  "ovenTemp": "烤溫例如 170°C，不需要烤箱則填 無烤箱",
+  "bakeMinutes": 烘烤時間分鐘（數字，沒有則填 0）,
+  "servings": 份量數（數字）,
+  "description": "食譜特色描述（50字以內）",
+  "ingredients": [
+    { "name": "材料名稱", "amount": 數量, "unit": "g 或 ml 或 顆", "isBase": true 或 false }
+  ],
+  "steps": [
+    { "order": 步驟編號, "description": "步驟說明", "timerMinutes": null 或 計時分鐘數 }
+  ]
+}`;
+
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(ULTRA_PROMPT).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  const parseUltraJson = (raw) => {
+    setUltraRaw(raw);
+    setUltraError('');
+    setUltraParsed(null);
+    if (!raw.trim()) return;
+    try {
+      const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (!parsed.name) throw new Error('缺少 name 欄位');
+      setUltraParsed(parsed);
+    } catch (e) {
+      setUltraError(`JSON 格式錯誤：${e.message}`);
+    }
+  };
+
+  const saveUltra = () => {
+    if (!ultraParsed) return;
+    const recipe = {
+      id: uuid(),
+      name: ultraParsed.name || '無名食譜',
+      subtitle: ultraParsed.subtitle || '',
+      emoji: ultraParsed.emoji || '🍞',
+      category: ultraParsed.category || '點心',
+      difficulty: ultraParsed.difficulty || '入門',
+      totalMinutes: Number(ultraParsed.totalMinutes) || 60,
+      ovenTemp: ultraParsed.ovenTemp || '—',
+      bakeMinutes: Number(ultraParsed.bakeMinutes) || 0,
+      servings: Number(ultraParsed.servings) || 1,
+      description: ultraParsed.description || '',
+      isUserUploaded: true,
+      createdAt: new Date().toISOString(),
+      ingredients: (ultraParsed.ingredients || []).map((ing, i) => ({ ...ing, id: `u_ing_${i}` })),
+      steps: (ultraParsed.steps || []).map((s, i) => ({ ...s, id: `u_step_${i}` })),
+    };
+    dispatch({ type: 'ADD_RECIPE', payload: recipe });
+    onBack();
+  };
 
   // Manual form state
   const [name, setName] = useState('');
@@ -292,12 +365,16 @@ export default function UploadRecipe({ onBack }) {
         </div>
       </div>
 
-      {/* Mode tabs */}
-      <div style={{ display: 'flex', gap: 8, padding: '16px 18px 0' }}>
-        {[['scan', '📷 AI 圖片辨識'], ['manual', '✏️ 手動輸入']].map(([key, label]) => (
+      {/* Mode tabs — 3 tabs */}
+      <div style={{ display: 'flex', gap: 6, padding: '16px 18px 0' }}>
+        {[
+          ['scan',   '📷 AI 辨識'],
+          ['ultra',  '✨ Ultra 橋接'],
+          ['manual', '✏️ 手動'],
+        ].map(([key, label]) => (
           <button key={key} onClick={() => setMode(key)} style={{
-            flex: 1, padding: '10px 0', border: 'none', borderRadius: 12,
-            fontFamily: 'inherit', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            flex: 1, padding: '9px 0', border: 'none', borderRadius: 12,
+            fontFamily: 'inherit', fontWeight: 700, fontSize: 12, cursor: 'pointer',
             background: mode === key ? '#7B5EA7' : 'white',
             color: mode === key ? 'white' : '#888',
           }}>{label}</button>
@@ -533,7 +610,120 @@ export default function UploadRecipe({ onBack }) {
           </>
         )}
 
+        {/* ─── Ultra Bridge Mode ─── */}
+        {mode === 'ultra' && (
+          <>
+            {/* Step-by-step guide card */}
+            <div className="card" style={{ background: 'linear-gradient(135deg, #2C1810 0%, #4A2C5E 100%)', color: 'white' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 6 }}>✨ Gemini Ultra 兩階段橋接</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
+                使用您的 Gemini Advanced（Ultra）訂閱來辨識食譜圖片，再將結果匯入 BakeBook。
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  ['1', '複製下方提示詞', '點擊「複製提示詞」按鈕'],
+                  ['2', '前往 Gemini Advanced', '開啟 gemini.google.com，上傳您的食譜圖片，貼上提示詞並送出'],
+                  ['3', 'Ultra 分析圖片', 'Gemini Ultra 會回傳 JSON 格式的食譜資料'],
+                  ['4', '貼入下方欄位', '複製 Ultra 的 JSON 回覆，貼入下方輸入框'],
+                ].map(([num, title, desc]) => (
+                  <div key={num} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, flexShrink: 0 }}>{num}</div>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>{title}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Phase 1: Copy prompt + Open Gemini */}
+            <div className="card">
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#7B5EA7', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 10 }}>
+                Phase 1 — 複製提示詞，前往 Ultra
+              </div>
+              <div style={{ background: '#F9F7FF', borderRadius: 10, padding: 10, fontSize: 11, color: '#555', lineHeight: 1.6, marginBottom: 10, maxHeight: 120, overflow: 'hidden', position: 'relative' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 10 }}>你是一位專業的烘焙食譜辨識助手。請仔細分析我附上的這張圖片...</span>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, background: 'linear-gradient(transparent, #F9F7FF)' }} />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={copyPrompt} style={{
+                  flex: 1, padding: '11px 0', border: 'none', borderRadius: 12,
+                  fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                  background: copied ? '#2E7D52' : '#7B5EA7', color: 'white',
+                  transition: 'background 0.2s',
+                }}>
+                  {copied ? '✓ 已複製！' : '📋 複製提示詞'}
+                </button>
+                <a href="https://gemini.google.com" target="_blank" rel="noreferrer" style={{
+                  flex: 1, padding: '11px 0', border: 'none', borderRadius: 12,
+                  fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                  background: '#1a1a2e', color: 'white', textDecoration: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                }}>
+                  ✨ 開啟 Gemini
+                </a>
+              </div>
+            </div>
+
+            {/* Phase 2: Paste JSON */}
+            <div className="card">
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#7B5EA7', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 10 }}>
+                Phase 2 — 貼入 Ultra 回傳的 JSON
+              </div>
+              <textarea
+                className="bake-input"
+                rows={6}
+                placeholder={'{\n  "name": "伯爵茶磅蛋糕",\n  "ingredients": [...],\n  "steps": [...]\n}'}
+                value={ultraRaw}
+                onChange={e => parseUltraJson(e.target.value)}
+                style={{ fontFamily: 'monospace', fontSize: 11, resize: 'vertical' }}
+              />
+
+              {/* Error */}
+              {ultraError && (
+                <div style={{ marginTop: 8, padding: 10, background: '#FCEBEB', borderRadius: 10, fontSize: 12, color: '#791F1F' }}>
+                  ⚠ {ultraError}
+                </div>
+              )}
+
+              {/* Parsed preview */}
+              {ultraParsed && (
+                <div style={{ marginTop: 10, background: '#F0EEFF', borderRadius: 12, padding: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 22 }}>{ultraParsed.emoji || '🍞'}</span>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: '#4A3BA0' }}>{ultraParsed.name}</div>
+                      {ultraParsed.subtitle && <div style={{ fontSize: 11, color: '#7B5EA7' }}>{ultraParsed.subtitle}</div>}
+                    </div>
+                    <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 7px', background: '#2E7D5222', color: '#2E7D52', borderRadius: 8 }}>
+                      ✓ JSON 有效
+                    </span>
+                  </div>
+                  {[
+                    ['分類', ultraParsed.category],
+                    ['難度', ultraParsed.difficulty],
+                    ultraParsed.ovenTemp && ['烤溫', ultraParsed.ovenTemp],
+                    ultraParsed.ingredients?.length && ['食材', `${ultraParsed.ingredients.length} 種`],
+                    ultraParsed.steps?.length && ['步驟', `${ultraParsed.steps.length} 步`],
+                  ].filter(Boolean).map(([f, v]) => (
+                    <div key={f} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', borderBottom: '1px solid rgba(123,94,167,0.1)' }}>
+                      <span style={{ color: '#7B5EA7', fontWeight: 700 }}>{f}</span>
+                      <span>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {ultraParsed && (
+              <PrimaryButton label={`✨ 儲存「${ultraParsed.name}」食譜`} color="#4A2C5E" onClick={saveUltra} />
+            )}
+          </>
+        )}
+
         {/* ─── Manual Mode ─── */}
+
         {mode === 'manual' && (
           <>
             <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
