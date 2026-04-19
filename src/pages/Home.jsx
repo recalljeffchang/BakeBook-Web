@@ -1,11 +1,11 @@
 // src/pages/Home.jsx
 import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Settings as SettingsIcon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { greeting, RECIPE_CATEGORIES } from '../data/models';
 import { RecipeCardRow } from '../components/UI';
 
-export default function Home({ onNavigate }) {
+export default function Home({ onNavigate, onOpenSettings }) {
   const { recipes, recipesForCategory } = useApp();
   const [category, setCategory] = useState('全部');
   const [search, setSearch] = useState('');
@@ -19,7 +19,21 @@ export default function Home({ onNavigate }) {
   return (
     <div className="page">
       {/* Header */}
-      <div className="hero-header" style={{ background: '#C8A97E' }}>
+      <div className="hero-header" style={{ background: '#C8A97E', position: 'relative' }}>
+        {/* Settings gear — top right */}
+        <button
+          onClick={onOpenSettings}
+          style={{
+            position: 'absolute', top: 'calc(var(--safe-top, 0px) + 14px)', right: 18,
+            background: 'rgba(255,255,255,0.22)', border: 'none',
+            borderRadius: 10, width: 34, height: 34,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'white',
+          }}
+        >
+          <SettingsIcon size={17} strokeWidth={2} />
+        </button>
+
         <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 4 }}>{greeting()}</div>
         <div style={{ fontSize: 26, fontWeight: 900, color: 'white', lineHeight: 1.25 }}>
           今天要做<br />什麼好料？
