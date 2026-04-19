@@ -17,13 +17,16 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body, #root {
-  height: 100%;
-  max-height: 100dvh;
-  overflow: hidden;
+html {
+  /* Safari/iPadOS: fill the real visual viewport, not the layout viewport */
+  height: -webkit-fill-available;
 }
 
 body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  overflow: hidden;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   background: var(--bake-bg);
   color: var(--bake-text);
@@ -35,13 +38,23 @@ body {
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  /* Use min-height so content is never clipped on Safari */
   height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   max-width: 430px;
   margin: 0 auto;
   background: var(--bake-bg);
   position: relative;
   overflow: hidden;
+}
+
+/* Wider than phone: show a subtle background behind the centered column */
+@media (min-width: 431px) {
+  body { background: #E8E4DD; }
+  .app-shell {
+    box-shadow: 0 0 60px rgba(0,0,0,0.12);
+  }
 }
 
 /* ─── Page ─── */
@@ -50,20 +63,26 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(72px + var(--safe-bottom));
+  /* Extra bottom room for fixed tab bar + Safari home indicator */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 20px));
 }
 
 /* ─── Tab Bar ─── */
 .tab-bar {
-  position: absolute;
+  /* Fixed so it always stays above Safari's bottom chrome on iPad/iPhone */
+  position: fixed;
   bottom: 0;
-  left: 0; right: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
   display: flex;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(0,0,0,0.08);
-  padding-bottom: var(--safe-bottom);
+  /* Always respect home-indicator / browser chrome bottom inset */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 100;
 }
 
@@ -259,8 +278,9 @@ body {
 /* ─── FAB ─── */
 .fab {
   position: fixed;
-  bottom: calc(80px + var(--safe-bottom));
-  right: 20px;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  /* Stay within the 430px column on wide screens (iPad landscape) */
+  right: max(20px, calc(50vw - 430px/2 + 20px));
   width: 52px; height: 52px;
   border-radius: 26px;
   border: none;
