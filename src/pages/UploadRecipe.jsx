@@ -6,8 +6,14 @@ import { RECIPE_CATEGORIES, DIFFICULTIES } from '../data/models';
 import { FormField, PrimaryButton, BackButton } from '../components/UI';
 
 // ─── Gemini API ────────────────────────────────────────────────────────────────
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+// Model fallback chain — tries cheaper/more available models first
+const GEMINI_MODELS = [
+  'gemini-2.0-flash-lite',   // free tier, generous quota
+  'gemini-1.5-flash-8b',     // smallest, most available
+  'gemini-2.0-flash',        // standard
+  'gemini-1.5-flash',        // fallback
+];
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 const PROMPT = `你是一位專業的烘焙食譜辨識助手。請仔細分析這張圖片（可能是食譜書、手寫食譜、截圖、或食物照片），並精確提取以下資訊。
 
@@ -33,8 +39,15 @@ const PROMPT = `你是一位專業的烘焙食譜辨識助手。請仔細分析�
 
 若圖片不是食譜，ingredients 和 steps 可為空陣列，但請盡力填寫 name 和 description。`;
 
-async function analyzeImageWithGemini(apiKey, base64Image, mimeType) {
-  const response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+// Parse "Please retry in Xs" from Gemini quota error messages
+function parseRetrySeconds(msg) {
+  const match = msg.match(/retry in ([\d.]+)s/i);
+  return match ? Math.ceil(parseFloat(match[1])) : null;
+}
+
+async function callGemini(apiKey, model, base64Image, mimeType) {
+  const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -50,15 +63,37 @@ async function analyzeImageWithGemini(apiKey, base64Image, mimeType) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error ${response.status}`);
+    const msg = err?.error?.message || `HTTP ${response.status}`;
+    const retrySecs = parseRetrySeconds(msg);
+    const friendly = retrySecs
+      ? `配額暫時耗盡，請等待 ${retrySecs} 秒後重試`
+      : msg;
+    const error = new Error(friendly);
+    error.isQuota = response.status === 429 || msg.includes('quota') || msg.includes('limit');
+    error.retrySecs = retrySecs;
+    throw error;
   }
 
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  // Strip markdown code fences if present
   const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
   return JSON.parse(cleaned);
+}
+
+// Try each model in fallback order; skip to next on quota errors
+async function analyzeImageWithGemini(apiKey, base64Image, mimeType, onModelChange) {
+  let lastError;
+  for (const model of GEMINI_MODELS) {
+    if (onModelChange) onModelChange(model);
+    try {
+      return await callGemini(apiKey, model, base64Image, mimeType);
+    } catch (err) {
+      lastError = err;
+      if (!err.isQuota) break; // non-quota errors should not retry with another model
+      // quota error → try next model
+    }
+  }
+  throw lastError;
 }
 
 function fileToBase64(file) {
@@ -95,6 +130,7 @@ export default function UploadRecipe({ onBack }) {
   // Scan state
   const [scanState, setScanState] = useState('idle'); // idle | scanning | done | error
   const [scanStep, setScanStep] = useState(0);
+  const [currentModel, setCurrentModel] = useState('');
   const [previewUrl, setPreviewUrl] = useState(null);
   const [aiResult, setAiResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -147,6 +183,7 @@ export default function UploadRecipe({ onBack }) {
   const runScan = async (file) => {
     setScanState('scanning');
     setScanStep(0);
+    setCurrentModel('');
 
     // Animate steps while the API call runs
     let stepIdx = 0;
@@ -157,14 +194,20 @@ export default function UploadRecipe({ onBack }) {
 
     try {
       const base64 = await fileToBase64(file);
-      const result = await analyzeImageWithGemini(apiKey, base64, file.type);
+      const result = await analyzeImageWithGemini(
+        apiKey, base64, file.type,
+        (model) => setCurrentModel(model)   // show which model is being tried
+      );
       clearInterval(stepInterval);
       setScanStep(SCAN_STEPS.length - 1);
       setAiResult(result);
       setScanState('done');
     } catch (err) {
       clearInterval(stepInterval);
-      setErrorMsg(err.message || '辨識失敗，請確認 API 金鑰或圖片格式');
+      const msg = err.retrySecs
+        ? `配额暫時耗盡，請等待 ${err.retrySecs} 秒後再點「開始辨識」`
+        : (err.message || '辨識失敗，請確認 API 金鑰或圖片格式');
+      setErrorMsg(msg);
       setScanState('error');
     }
   };
@@ -378,7 +421,7 @@ export default function UploadRecipe({ onBack }) {
                     }} />
                   </div>
                   <div style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 6 }}>
-                    Gemini AI 分析中，請稍候...
+                    {currentModel ? `使用 ${currentModel} 辨識中...` : 'Gemini AI 分析中，請稍候...'}
                   </div>
                 </div>
               )}
