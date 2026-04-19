@@ -6,6 +6,35 @@ import { SAMPLE_RECIPES, SAMPLE_JOURNAL, SAMPLE_INVENTORY } from '../data/sample
 
 // ─── All supported Gemini models ─────────────────────────────────────────────
 export const GEMINI_MODELS = [
+  // ── Ultra / Pro tier (Gemini Advanced subscription or paid API) ──────────
+  {
+    id: 'gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro',
+    badge: '✨ Ultra',
+    badgeColor: '#B8860B',
+    desc: 'Gemini Ultra 等級，最高精度，複雜食譜辨識最準確',
+    rpm: '5 RPM',
+    rpd: '25 RPD',
+  },
+  {
+    id: 'gemini-2.5-pro-preview-03-25',
+    label: 'Gemini 2.5 Pro Preview',
+    badge: 'Ultra Preview',
+    badgeColor: '#C8A020',
+    desc: '2.5 Pro 預覽版，效能與 Ultra 相當',
+    rpm: '5 RPM',
+    rpd: '25 RPD',
+  },
+  {
+    id: 'gemini-2.0-pro-exp',
+    label: 'Gemini 2.0 Pro Exp',
+    badge: 'Pro',
+    badgeColor: '#7B5EA7',
+    desc: '2.0 世代 Pro 實驗版，高精度辨識',
+    rpm: '2 RPM',
+    rpd: '50 RPD',
+  },
+  // ── Free / Standard tier ─────────────────────────────────────────────────
   {
     id: 'gemini-2.0-flash-lite',
     label: 'Gemini 2.0 Flash Lite',
@@ -19,7 +48,7 @@ export const GEMINI_MODELS = [
     id: 'gemini-2.0-flash',
     label: 'Gemini 2.0 Flash',
     badge: '標準',
-    badgeColor: '#7B5EA7',
+    badgeColor: '#2E7D52',
     desc: '功能完整，辨識準確度高',
     rpm: '15 RPM',
     rpd: '1,500 RPD',
@@ -34,11 +63,11 @@ export const GEMINI_MODELS = [
     rpd: '1,500 RPD',
   },
   {
-    id: 'gemini-1.5-flash',
-    label: 'Gemini 1.5 Flash',
+    id: 'gemini-1.5-flash-latest',
+    label: 'Gemini 1.5 Flash (Latest)',
     badge: '舊世代',
     badgeColor: '#888',
-    desc: '第一代 Flash，部分金鑰可能不支援',
+    desc: '第一代 Flash 最新版，穩定可用',
     rpm: '15 RPM',
     rpd: '1,500 RPD',
   },
@@ -47,7 +76,7 @@ export const GEMINI_MODELS = [
     label: 'Gemini 1.5 Pro',
     badge: 'Pro',
     badgeColor: '#E8A62D',
-    desc: '最高精度，需付費方案或高配額帳號',
+    desc: '高精度，需付費方案或高配額帳號',
     rpm: '2 RPM',
     rpd: '50 RPD',
   },
