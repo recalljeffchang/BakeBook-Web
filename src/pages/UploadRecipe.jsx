@@ -6,7 +6,7 @@ import { RECIPE_CATEGORIES, DIFFICULTIES } from '../data/models';
 import { FormField, PrimaryButton, BackButton } from '../components/UI';
 
 // ─── Gemini API ────────────────────────────────────────────────────────────────
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const PROMPT = `你是一位專業的烘焙食譜辨識助手。請仔細分析這張圖片（可能是食譜書、手寫食譜、截圖、或食物照片），並精確提取以下資訊。
