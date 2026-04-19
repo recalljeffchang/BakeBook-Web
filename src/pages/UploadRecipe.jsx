@@ -352,9 +352,26 @@ export default function UploadRecipe({ onBack }) {
 
             {/* Scan Card */}
             <div className="card">
+              {/* Header row: label + active model badge + key button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#7B5EA7', letterSpacing: 0.4, textTransform: 'uppercase' }}>
-                  拍照辨識食譜
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#7B5EA7', letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                    拍照辨識食譜
+                  </div>
+                  {/* Active model pill */}
+                  {(() => {
+                    const modelId = localStorage.getItem('bb_gemini_model') || GEMINI_MODELS[0].id;
+                    const meta = GEMINI_MODELS.find(m => m.id === modelId) || GEMINI_MODELS[0];
+                    return (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8,
+                        background: meta.badgeColor + '22', color: meta.badgeColor,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {meta.label.replace('Gemini ', '')}
+                      </span>
+                    );
+                  })()}
                 </div>
                 {apiKey && !showKeyInput && (
                   <button onClick={() => setShowKeyInput(true)}
