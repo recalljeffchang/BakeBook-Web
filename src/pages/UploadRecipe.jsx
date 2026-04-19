@@ -67,11 +67,25 @@ async function callGemini(apiKey, model, base64Image, mimeType) {
     const err = await response.json().catch(() => ({}));
     const msg = err?.error?.message || `HTTP ${response.status}`;
     const retrySecs = parseRetrySeconds(msg);
+
+    // Classify error type:
+    // isSkippable = true  → try next model in fallback chain
+    // isSkippable = false → stop immediately (e.g. invalid API key)
+    const msgLow = msg.toLowerCase();
+    const isQuota   = response.status === 429 || msgLow.includes('quota') || msgLow.includes('rate limit');
+    const isNotFound = response.status === 404 || msgLow.includes('not found') || msgLow.includes('not supported');
+    const isAuthFail = response.status === 401 || response.status === 403 || msgLow.includes('api key') || msgLow.includes('permission');
+
     const friendly = retrySecs
       ? `配額暫時耗盡，請等待 ${retrySecs} 秒後重試`
-      : msg;
+      : isNotFound
+        ? `此模型不支援，嘗試下一個...`
+        : isAuthFail
+          ? `API 金鑰無效或權限不足，請至設定更換金鑰`
+          : msg;
+
     const error = new Error(friendly);
-    error.isQuota = response.status === 429 || msg.includes('quota') || msg.includes('limit');
+    error.isSkippable = (isQuota || isNotFound) && !isAuthFail;
     error.retrySecs = retrySecs;
     throw error;
   }
@@ -82,18 +96,25 @@ async function callGemini(apiKey, model, base64Image, mimeType) {
   return JSON.parse(cleaned);
 }
 
-// Try each model in fallback order; skip to next on quota errors
+// Try each model in fallback order
+// Skips on: quota errors, model-not-found errors
+// Stops on:  auth failures (invalid key)
 async function analyzeImageWithGemini(apiKey, base64Image, mimeType, onModelChange) {
   let lastError;
-  for (const model of getModelOrder()) {  // getModelOrder() reads localStorage at call time
+  const models = getModelOrder();
+  for (const model of models) {
     if (onModelChange) onModelChange(model);
     try {
       return await callGemini(apiKey, model, base64Image, mimeType);
     } catch (err) {
       lastError = err;
-      if (!err.isQuota) break; // non-quota errors → don't try next model
-      // quota error → try next model in chain
+      if (!err.isSkippable) break; // auth errors etc. → stop immediately
+      // quota or not-found → try next model
     }
+  }
+  // If all models exhausted, give a helpful final message
+  if (!lastError.retrySecs && models.length > 1) {
+    lastError.message = `所有可用模型均無法辨識。\n請至 設定 → AI 模型管理 → 掃描可用模型，或確認 API 金鑰是否正確。`;
   }
   throw lastError;
 }
