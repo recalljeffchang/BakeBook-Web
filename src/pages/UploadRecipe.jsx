@@ -4,15 +4,17 @@ import { useApp } from '../context/AppContext';
 import { v4 as uuid } from '../utils/uuid';
 import { RECIPE_CATEGORIES, DIFFICULTIES } from '../data/models';
 import { FormField, PrimaryButton, BackButton } from '../components/UI';
+import { GEMINI_MODELS } from './Settings';
 
 // ─── Gemini API ────────────────────────────────────────────────────────────────
-// Model fallback chain — tries cheaper/more available models first
-const GEMINI_MODELS = [
-  'gemini-2.0-flash-lite',   // free tier, generous quota
-  'gemini-1.5-flash-8b',     // smallest, most available
-  'gemini-2.0-flash',        // standard
-  'gemini-1.5-flash',        // fallback
-];
+// Build model list: preferred model first, then the rest as fallback
+function getModelOrder() {
+  const preferred = localStorage.getItem('bb_gemini_model');
+  const all = GEMINI_MODELS.map(m => m.id);
+  if (!preferred) return all;
+  return [preferred, ...all.filter(id => id !== preferred)];
+}
+
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 const PROMPT = `你是一位專業的烘焙食譜辨識助手。請仔細分析這張圖片（可能是食譜書、手寫食譜、截圖、或食物照片），並精確提取以下資訊。
@@ -83,14 +85,14 @@ async function callGemini(apiKey, model, base64Image, mimeType) {
 // Try each model in fallback order; skip to next on quota errors
 async function analyzeImageWithGemini(apiKey, base64Image, mimeType, onModelChange) {
   let lastError;
-  for (const model of GEMINI_MODELS) {
+  for (const model of getModelOrder()) {  // getModelOrder() reads localStorage at call time
     if (onModelChange) onModelChange(model);
     try {
       return await callGemini(apiKey, model, base64Image, mimeType);
     } catch (err) {
       lastError = err;
-      if (!err.isQuota) break; // non-quota errors should not retry with another model
-      // quota error → try next model
+      if (!err.isQuota) break; // non-quota errors → don't try next model
+      // quota error → try next model in chain
     }
   }
   throw lastError;
