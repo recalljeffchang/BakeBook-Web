@@ -42,7 +42,7 @@ const AI_RESULT = {
 
 export default function UploadRecipe({ onBack }) {
   const { dispatch } = useApp();
-  const [mode, setMode] = useState('manual'); // manual | scan
+  const [mode, setMode] = useState('scan'); // scan | manual — AI is the primary flow
   const [scanMode, setScanMode] = useState('idle');
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState(SCAN_STEPS[0][1]);
