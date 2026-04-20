@@ -9,6 +9,7 @@ import Journal from './pages/Journal';
 import Inventory from './pages/Inventory';
 import RecipeDetail from './pages/RecipeDetail';
 import UploadRecipe from './pages/UploadRecipe';
+import UltraBridge from './pages/UltraBridge';
 import Settings from './pages/Settings';
 
 const TABS = [
@@ -63,7 +64,13 @@ function AppShell() {
       case 'upload-recipe':
         return (
           <div style={OVERLAY_STYLE}>
-            <UploadRecipe onBack={goBack} />
+            <UploadRecipe onBack={goBack} onNavigate={navigate} />
+          </div>
+        );
+      case 'ultra-bridge':
+        return (
+          <div style={OVERLAY_STYLE}>
+            <UltraBridge onBack={goBack} />
           </div>
         );
       default: return null;

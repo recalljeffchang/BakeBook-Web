@@ -142,7 +142,7 @@ const SCAN_STEPS = [
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
-export default function UploadRecipe({ onBack }) {
+export default function UploadRecipe({ onBack, onNavigate }) {
   const { dispatch } = useApp();
   const [mode, setMode] = useState('scan'); // scan | ultra | manual
 
@@ -610,115 +610,46 @@ export default function UploadRecipe({ onBack }) {
           </>
         )}
 
-        {/* ─── Ultra Bridge Mode ─── */}
+        {/* ─── Ultra Bridge Mode — entry to dedicated page ─── */}
         {mode === 'ultra' && (
           <>
-            {/* Step-by-step guide card */}
-            <div className="card" style={{ background: 'linear-gradient(135deg, #2C1810 0%, #4A2C5E 100%)', color: 'white' }}>
-              <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 6 }}>✨ Gemini Ultra 兩階段橋接</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
-                使用您的 Gemini Advanced（Ultra）訂閱來辨識食譜圖片，再將結果匯入 BakeBook。
+            {/* Hero entry card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #2C1810 0%, #4A2C5E 100%)',
+              borderRadius: 20, padding: 22, color: 'white',
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>✨</div>
+              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 6 }}>Gemini Ultra 橋接</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 20 }}>
+                使用您的 Gemini Advanced（Ultra）訂閱辨識食譜圖片。
+                全程在一個頁面完成：選圖 → 複製提示 → 貼入結果 → 儲存。
               </div>
-              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  ['1', '複製下方提示詞', '點擊「複製提示詞」按鈕'],
-                  ['2', '前往 Gemini Advanced', '開啟 gemini.google.com，上傳您的食譜圖片，貼上提示詞並送出'],
-                  ['3', 'Ultra 分析圖片', 'Gemini Ultra 會回傳 JSON 格式的食譜資料'],
-                  ['4', '貼入下方欄位', '複製 Ultra 的 JSON 回覆，貼入下方輸入框'],
-                ].map(([num, title, desc]) => (
-                  <div key={num} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, flexShrink: 0 }}>{num}</div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{title}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{desc}</div>
-                    </div>
+
+              {/* Step preview */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+                {['📸 選圖', '📋 複製', '✨ Ultra', '📥 貼入', '💾 儲存'].map((s, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>{s}</div>
+                    {i < 4 && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>→</div>}
                   </div>
                 ))}
               </div>
+
+              <button
+                onClick={() => onNavigate?.('ultra-bridge')}
+                style={{
+                  width: '100%', padding: '14px 0', border: 'none', borderRadius: 13,
+                  background: '#F5D78E', color: '#2C1810', fontWeight: 900, fontSize: 15,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                ✨ 開啟 Ultra 橋接頁面
+              </button>
             </div>
 
-            {/* Phase 1: Copy prompt + Open Gemini */}
-            <div className="card">
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#7B5EA7', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 10 }}>
-                Phase 1 — 複製提示詞，前往 Ultra
-              </div>
-              <div style={{ background: '#F9F7FF', borderRadius: 10, padding: 10, fontSize: 11, color: '#555', lineHeight: 1.6, marginBottom: 10, maxHeight: 120, overflow: 'hidden', position: 'relative' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 10 }}>你是一位專業的烘焙食譜辨識助手。請仔細分析我附上的這張圖片...</span>
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, background: 'linear-gradient(transparent, #F9F7FF)' }} />
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={copyPrompt} style={{
-                  flex: 1, padding: '11px 0', border: 'none', borderRadius: 12,
-                  fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-                  background: copied ? '#2E7D52' : '#7B5EA7', color: 'white',
-                  transition: 'background 0.2s',
-                }}>
-                  {copied ? '✓ 已複製！' : '📋 複製提示詞'}
-                </button>
-                <a href="https://gemini.google.com" target="_blank" rel="noreferrer" style={{
-                  flex: 1, padding: '11px 0', border: 'none', borderRadius: 12,
-                  fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-                  background: '#1a1a2e', color: 'white', textDecoration: 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                }}>
-                  ✨ 開啟 Gemini
-                </a>
-              </div>
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#aaa', padding: '4px 0' }}>
+              在獨立頁面完成全部步驟，更清晰易用
             </div>
-
-            {/* Phase 2: Paste JSON */}
-            <div className="card">
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#7B5EA7', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 10 }}>
-                Phase 2 — 貼入 Ultra 回傳的 JSON
-              </div>
-              <textarea
-                className="bake-input"
-                rows={6}
-                placeholder={'{\n  "name": "伯爵茶磅蛋糕",\n  "ingredients": [...],\n  "steps": [...]\n}'}
-                value={ultraRaw}
-                onChange={e => parseUltraJson(e.target.value)}
-                style={{ fontFamily: 'monospace', fontSize: 11, resize: 'vertical' }}
-              />
-
-              {/* Error */}
-              {ultraError && (
-                <div style={{ marginTop: 8, padding: 10, background: '#FCEBEB', borderRadius: 10, fontSize: 12, color: '#791F1F' }}>
-                  ⚠ {ultraError}
-                </div>
-              )}
-
-              {/* Parsed preview */}
-              {ultraParsed && (
-                <div style={{ marginTop: 10, background: '#F0EEFF', borderRadius: 12, padding: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <span style={{ fontSize: 22 }}>{ultraParsed.emoji || '🍞'}</span>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 900, color: '#4A3BA0' }}>{ultraParsed.name}</div>
-                      {ultraParsed.subtitle && <div style={{ fontSize: 11, color: '#7B5EA7' }}>{ultraParsed.subtitle}</div>}
-                    </div>
-                    <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 7px', background: '#2E7D5222', color: '#2E7D52', borderRadius: 8 }}>
-                      ✓ JSON 有效
-                    </span>
-                  </div>
-                  {[
-                    ['分類', ultraParsed.category],
-                    ['難度', ultraParsed.difficulty],
-                    ultraParsed.ovenTemp && ['烤溫', ultraParsed.ovenTemp],
-                    ultraParsed.ingredients?.length && ['食材', `${ultraParsed.ingredients.length} 種`],
-                    ultraParsed.steps?.length && ['步驟', `${ultraParsed.steps.length} 步`],
-                  ].filter(Boolean).map(([f, v]) => (
-                    <div key={f} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', borderBottom: '1px solid rgba(123,94,167,0.1)' }}>
-                      <span style={{ color: '#7B5EA7', fontWeight: 700 }}>{f}</span>
-                      <span>{v}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {ultraParsed && (
-              <PrimaryButton label={`✨ 儲存「${ultraParsed.name}」食譜`} color="#4A2C5E" onClick={saveUltra} />
-            )}
           </>
         )}
 
