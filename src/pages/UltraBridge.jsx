@@ -58,36 +58,72 @@ export default function UltraBridge({ onBack }) {
   // ── State ──────────────────────────────────────────────────────────────────
   const [imageFile, setImageFile]   = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [copied, setCopied]         = useState(false);
+  const [shareStatus, setShareStatus] = useState('idle'); // idle | sharing | done | copied
   const [jsonRaw, setJsonRaw]       = useState('');
   const [parsed, setParsed]         = useState(null);
   const [jsonError, setJsonError]   = useState('');
   const [saved, setSaved]           = useState(false);
 
-  // Derive current active step
-  const activeStep = saved ? 6 : parsed ? 5 : jsonRaw.trim() ? 4 : copied ? 3 : imageFile ? 2 : 1;
+  // Derive current active step (3 steps now: select → send → paste → save)
+  const activeStep = saved ? 5 : parsed ? 4 : jsonRaw.trim() ? 3 : shareStatus === 'done' || shareStatus === 'copied' ? 3 : imageFile ? 2 : 1;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleFile = (file) => {
     if (!file || !file.type.startsWith('image/')) return;
     setImageFile(file);
     setPreviewUrl(URL.createObjectURL(file));
-    setCopied(false);
+    setShareStatus('idle');
     setJsonRaw('');
     setParsed(null);
     setJsonError('');
     setSaved(false);
   };
 
-  const copyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(ULTRA_PROMPT);
-      setCopied(true);
-    } catch {
-      // fallback — select a textarea
-      const el = document.getElementById('ub-prompt-text');
-      if (el) { el.select(); document.execCommand('copy'); setCopied(true); }
+  // ── Smart send: image + prompt together ─────────────────────────────────────
+  const shareToGemini = async () => {
+    if (!imageFile) return;
+    setShareStatus('sharing');
+
+    // ① Try Web Share API (iOS/iPadOS/Android — sends image + text to Gemini app)
+    const canWebShare = typeof navigator.share === 'function';
+    if (canWebShare) {
+      try {
+        await navigator.share({
+          title: 'BakeBook 食譜辨識',
+          text: ULTRA_PROMPT,
+          files: [imageFile],
+        });
+        setShareStatus('done');
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // share failed (not user cancel) — fall through to clipboard method
+        } else {
+          setShareStatus('idle'); // user cancelled
+          return;
+        }
+      }
     }
+
+    // ② Fallback: copy image to clipboard (desktop Chrome/Edge)
+    try {
+      const clipItems = [new ClipboardItem({ [imageFile.type]: imageFile })];
+      await navigator.clipboard.write(clipItems);
+      // Also copy prompt text separately (user pastes image first, then prompt)
+      // we tell them via UI
+      setShareStatus('copied'); // image in clipboard, prompt shown
+    } catch {
+      // ③ Last resort: just copy text prompt
+      try {
+        await navigator.clipboard.writeText(ULTRA_PROMPT);
+        setShareStatus('copied');
+      } catch {
+        setShareStatus('idle');
+      }
+    }
+
+    // Open Gemini in new tab automatically
+    window.open('https://gemini.google.com', '_blank');
   };
 
   const parseJson = (raw) => {
@@ -128,26 +164,21 @@ export default function UltraBridge({ onBack }) {
     setSaved(true);
   };
 
-  // ── Styles helpers ─────────────────────────────────────────────────────────
+  // ── Style helpers ──────────────────────────────────────────────────────────
   const stepDone   = (n) => activeStep > n;
   const stepActive = (n) => activeStep === n;
 
-  const cardStyle = (n) => ({
+  const cardStyle = (n, extra = {}) => ({
     background: 'white',
     borderRadius: 16,
     padding: 16,
     border: `2px solid ${stepActive(n) ? '#B8860B' : stepDone(n) ? '#2E7D52' : '#f0ece6'}`,
     transition: 'border-color 0.2s',
     opacity: activeStep < n ? 0.45 : 1,
+    ...extra,
   });
 
-  const btn = (bg, label, onClick, disabled = false) => (
-    <button disabled={disabled} onClick={onClick} style={{
-      width: '100%', padding: '12px 0', border: 'none', borderRadius: 12,
-      background: disabled ? '#ddd' : bg, color: 'white', fontWeight: 800,
-      fontSize: 14, cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-    }}>{label}</button>
-  );
+  const isShared = shareStatus === 'done' || shareStatus === 'copied';
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -234,76 +265,87 @@ export default function UltraBridge({ onBack }) {
           </div>
         </div>
 
-        {/* ── Step 2: Copy Prompt ── */}
+        {/* ── Step 2: Send Image + Prompt Together ── */}
         <div style={cardStyle(2)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <StepBadge n={2} done={stepDone(2)} active={stepActive(2)} />
+            <StepBadge n={2} done={isShared} active={stepActive(2)} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 800 }}>📋 複製提示詞</div>
-              <div style={{ fontSize: 11, color: '#888' }}>將這段提示詞貼入 Gemini Ultra</div>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>✨ 一鍵傳送給 Gemini Ultra</div>
+              <div style={{ fontSize: 11, color: '#888' }}>圖片 + 提示詞同時送出</div>
             </div>
-            {copied && (
-              <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#2E7D52' }}>✓ 已複製</span>
+            {isShared && <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#2E7D52' }}>✓ 已送出</span>}
+          </div>
+
+          {/* How it works */}
+          <div style={{ background: '#F9F7FF', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 12, color: '#4A2C5E', lineHeight: 1.7 }}>
+            {typeof navigator.share === 'function' ? (
+              <>
+                <strong>📱 偵測到行動裝置</strong><br />
+                點擊按鈕後會開啟 iOS/Android 分享選單。
+                選擇 <strong>Gemini App</strong>，圖片和提示詞會<strong>同時</strong>傳入！
+              </>
+            ) : (
+              <>
+                <strong>💻 桌面瀏覽器模式</strong><br />
+                點擊後會將<strong>圖片複製到剪貼簿</strong>並自動開啟 Gemini 網頁。
+                在 Gemini 對話框中：先貼上圖片 (Ctrl+V)，再貼上提示詞。
+              </>
             )}
           </div>
 
-          {/* Prompt preview box */}
-          <div style={{
-            background: '#1a1a2e', borderRadius: 10, padding: 12,
-            fontSize: 10, color: '#adb5bd', fontFamily: 'monospace',
-            lineHeight: 1.5, maxHeight: 88, overflow: 'hidden',
-            position: 'relative', marginBottom: 10,
-          }}>
-            {ULTRA_PROMPT.slice(0, 200)}...
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 32,
-              background: 'linear-gradient(transparent, #1a1a2e)' }} />
-          </div>
-          {/* Hidden full textarea for copy fallback */}
-          <textarea id="ub-prompt-text" readOnly value={ULTRA_PROMPT} style={{ position: 'absolute', left: -9999, opacity: 0, height: 1 }} />
-
-          {btn(
-            copied ? '#2E7D52' : '#B8860B',
-            copied ? '✓ 提示詞已複製！' : '📋 一鍵複製提示詞',
-            copyPrompt,
-            activeStep < 2,
-          )}
-        </div>
-
-        {/* ── Step 3: Open Gemini Ultra ── */}
-        <div style={cardStyle(3)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <StepBadge n={3} done={stepDone(3)} active={stepActive(3)} />
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 800 }}>✨ 前往 Gemini Ultra</div>
-              <div style={{ fontSize: 11, color: '#888' }}>上傳圖片 + 貼上提示詞 → 送出</div>
-            </div>
-          </div>
-
-          <div style={{ background: '#F9F7FF', borderRadius: 10, padding: 12, marginBottom: 10, fontSize: 12, color: '#555', lineHeight: 1.7 }}>
-            <strong style={{ color: '#4A2C5E' }}>在 Gemini 中的操作：</strong>
-            <ol style={{ margin: '6px 0 0 16px', padding: 0, fontSize: 11, color: '#666' }}>
-              <li>開啟 gemini.google.com（下方按鈕）</li>
-              <li>點擊附件圖示 🖼️，上傳您剛才選取的圖片</li>
-              <li>在文字框中貼上複製的提示詞</li>
-              <li>按送出，等待 Ultra 分析完成</li>
-              <li>複製 Ultra 回傳的全部 JSON 文字</li>
-            </ol>
-          </div>
-
-          <a
-            href="https://gemini.google.com"
-            target="_blank"
-            rel="noreferrer"
+          {/* The big button */}
+          <button
+            onClick={shareToGemini}
+            disabled={!imageFile || shareStatus === 'sharing'}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '12px 0', borderRadius: 12, border: 'none', textDecoration: 'none',
-              background: activeStep < 3 ? '#ddd' : 'linear-gradient(135deg, #2C1810, #4A2C5E)',
-              color: 'white', fontWeight: 800, fontSize: 14,
-              pointerEvents: activeStep < 3 ? 'none' : 'auto',
+              width: '100%', padding: '14px 0', border: 'none', borderRadius: 13,
+              background: isShared
+                ? '#2E7D52'
+                : !imageFile
+                  ? '#ddd'
+                  : shareStatus === 'sharing'
+                    ? '#9575CD'
+                    : 'linear-gradient(135deg, #2C1810, #4A2C5E)',
+              color: !imageFile ? '#aaa' : 'white',
+              fontWeight: 900, fontSize: 15,
+              cursor: (!imageFile || shareStatus === 'sharing') ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit', transition: 'background 0.2s',
             }}
           >
-            ✨ 開啟 Gemini Advanced
-          </a>
+            {shareStatus === 'sharing' ? '⏳ 傳送中...' :
+             shareStatus === 'done'    ? '✓ 已傳送到 Gemini！' :
+             shareStatus === 'copied'  ? '✓ 已複製，請在 Gemini 貼上' :
+             typeof navigator.share === 'function'
+               ? '📤 分享圖片 + 提示詞到 Gemini'
+               : '📋 複製圖片 + 開啟 Gemini'}
+          </button>
+
+          {/* Post-share guidance for desktop clipboard mode */}
+          {shareStatus === 'copied' && (
+            <div style={{ marginTop: 10, padding: 12, background: '#FFF8E7', borderRadius: 10, fontSize: 12, color: '#7A5C00', lineHeight: 1.7 }}>
+              <strong>📋 圖片已在剪貼簿！下一步：</strong><br />
+              1. 在 Gemini 對話框按 <kbd style={{ background: '#eee', padding: '1px 5px', borderRadius: 4 }}>Ctrl+V</kbd> 貼上圖片<br />
+              2. 再貼上以下提示詞（長按複製）：
+              <textarea
+                readOnly
+                value={ULTRA_PROMPT}
+                rows={3}
+                onFocus={e => e.target.select()}
+                style={{
+                  width: '100%', marginTop: 8, fontFamily: 'monospace', fontSize: 10,
+                  borderRadius: 8, border: '1px solid #e0d0a0', padding: 8,
+                  background: '#fffdf5', resize: 'none', color: '#555',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Already shared — remind user to come back */}
+          {(shareStatus === 'done') && (
+            <div style={{ marginTop: 10, padding: 12, background: '#E8F8EE', borderRadius: 10, fontSize: 12, color: '#1C5E3A', lineHeight: 1.7 }}>
+              ✅ Gemini 正在分析您的圖片。分析完成後，複製全部 JSON 文字回到這裡貼入步驟 3。
+            </div>
+          )}
         </div>
 
         {/* ── Step 4: Paste JSON ── */}
