@@ -58,72 +58,37 @@ export default function UltraBridge({ onBack }) {
   // ── State ──────────────────────────────────────────────────────────────────
   const [imageFile, setImageFile]   = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [shareStatus, setShareStatus] = useState('idle'); // idle | sharing | done | copied
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [imageSaved, setImageSaved]   = useState(false);
   const [jsonRaw, setJsonRaw]       = useState('');
   const [parsed, setParsed]         = useState(null);
   const [jsonError, setJsonError]   = useState('');
   const [saved, setSaved]           = useState(false);
 
-  // Derive current active step (3 steps now: select → send → paste → save)
-  const activeStep = saved ? 5 : parsed ? 4 : jsonRaw.trim() ? 3 : shareStatus === 'done' || shareStatus === 'copied' ? 3 : imageFile ? 2 : 1;
+  // Derive current active step
+  const activeStep = saved ? 5 : parsed ? 4 : jsonRaw.trim() ? 3 : promptCopied ? 3 : imageFile ? 2 : 1;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleFile = (file) => {
     if (!file || !file.type.startsWith('image/')) return;
     setImageFile(file);
     setPreviewUrl(URL.createObjectURL(file));
-    setShareStatus('idle');
+    setPromptCopied(false);
+    setImageSaved(false);
     setJsonRaw('');
     setParsed(null);
     setJsonError('');
     setSaved(false);
   };
 
-  // ── Smart send: image + prompt together ─────────────────────────────────────
-  const shareToGemini = async () => {
-    if (!imageFile) return;
-    setShareStatus('sharing');
-
-    // ① Try Web Share API (iOS/iPadOS/Android — sends image + text to Gemini app)
-    const canWebShare = typeof navigator.share === 'function';
-    if (canWebShare) {
-      try {
-        await navigator.share({
-          title: 'BakeBook 食譜辨識',
-          text: ULTRA_PROMPT,
-          files: [imageFile],
-        });
-        setShareStatus('done');
-        return;
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          // share failed (not user cancel) — fall through to clipboard method
-        } else {
-          setShareStatus('idle'); // user cancelled
-          return;
-        }
-      }
-    }
-
-    // ② Fallback: copy image to clipboard (desktop Chrome/Edge)
+  const copyPrompt = async () => {
     try {
-      const clipItems = [new ClipboardItem({ [imageFile.type]: imageFile })];
-      await navigator.clipboard.write(clipItems);
-      // Also copy prompt text separately (user pastes image first, then prompt)
-      // we tell them via UI
-      setShareStatus('copied'); // image in clipboard, prompt shown
+      await navigator.clipboard.writeText(ULTRA_PROMPT);
     } catch {
-      // ③ Last resort: just copy text prompt
-      try {
-        await navigator.clipboard.writeText(ULTRA_PROMPT);
-        setShareStatus('copied');
-      } catch {
-        setShareStatus('idle');
-      }
+      const el = document.getElementById('ub-prompt-hidden');
+      if (el) { el.select(); document.execCommand('copy'); }
     }
-
-    // Open Gemini in new tab automatically
-    window.open('https://gemini.google.com', '_blank');
+    setPromptCopied(true);
   };
 
   const parseJson = (raw) => {
@@ -178,7 +143,7 @@ export default function UltraBridge({ onBack }) {
     ...extra,
   });
 
-  const isShared = shareStatus === 'done' || shareStatus === 'copied';
+  const step2Done = imageSaved && promptCopied;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -265,90 +230,126 @@ export default function UltraBridge({ onBack }) {
           </div>
         </div>
 
-        {/* ── Step 2: Send Image + Prompt Together ── */}
+        {/* ── Step 2: Save Image + Copy Prompt ── */}
         <div style={cardStyle(2)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <StepBadge n={2} done={isShared} active={stepActive(2)} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <StepBadge n={2} done={step2Done} active={stepActive(2)} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 800 }}>✨ 一鍵傳送給 Gemini Ultra</div>
-              <div style={{ fontSize: 11, color: '#888' }}>圖片 + 提示詞同時送出</div>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>📲 準備圖片與提示詞</div>
+              <div style={{ fontSize: 11, color: '#888' }}>儲存圖片到相簿 + 複製提示詞</div>
             </div>
-            {isShared && <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#2E7D52' }}>✓ 已送出</span>}
+            {step2Done && <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#2E7D52' }}>✓ 完成</span>}
           </div>
 
-          {/* How it works */}
-          <div style={{ background: '#F9F7FF', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 12, color: '#4A2C5E', lineHeight: 1.7 }}>
-            {typeof navigator.share === 'function' ? (
-              <>
-                <strong>📱 偵測到行動裝置</strong><br />
-                點擊按鈕後會開啟 iOS/Android 分享選單。
-                選擇 <strong>Gemini App</strong>，圖片和提示詞會<strong>同時</strong>傳入！
-              </>
-            ) : (
-              <>
-                <strong>💻 桌面瀏覽器模式</strong><br />
-                點擊後會將<strong>圖片複製到剪貼簿</strong>並自動開啟 Gemini 網頁。
-                在 Gemini 對話框中：先貼上圖片 (Ctrl+V)，再貼上提示詞。
-              </>
-            )}
-          </div>
-
-          {/* The big button */}
-          <button
-            onClick={shareToGemini}
-            disabled={!imageFile || shareStatus === 'sharing'}
-            style={{
-              width: '100%', padding: '14px 0', border: 'none', borderRadius: 13,
-              background: isShared
-                ? '#2E7D52'
-                : !imageFile
-                  ? '#ddd'
-                  : shareStatus === 'sharing'
-                    ? '#9575CD'
-                    : 'linear-gradient(135deg, #2C1810, #4A2C5E)',
-              color: !imageFile ? '#aaa' : 'white',
-              fontWeight: 900, fontSize: 15,
-              cursor: (!imageFile || shareStatus === 'sharing') ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', transition: 'background 0.2s',
-            }}
-          >
-            {shareStatus === 'sharing' ? '⏳ 傳送中...' :
-             shareStatus === 'done'    ? '✓ 已傳送到 Gemini！' :
-             shareStatus === 'copied'  ? '✓ 已複製，請在 Gemini 貼上' :
-             typeof navigator.share === 'function'
-               ? '📤 分享圖片 + 提示詞到 Gemini'
-               : '📋 複製圖片 + 開啟 Gemini'}
-          </button>
-
-          {/* Post-share guidance for desktop clipboard mode */}
-          {shareStatus === 'copied' && (
-            <div style={{ marginTop: 10, padding: 12, background: '#FFF8E7', borderRadius: 10, fontSize: 12, color: '#7A5C00', lineHeight: 1.7 }}>
-              <strong>📋 圖片已在剪貼簿！下一步：</strong><br />
-              1. 在 Gemini 對話框按 <kbd style={{ background: '#eee', padding: '1px 5px', borderRadius: 4 }}>Ctrl+V</kbd> 貼上圖片<br />
-              2. 再貼上以下提示詞（長按複製）：
-              <textarea
-                readOnly
-                value={ULTRA_PROMPT}
-                rows={3}
-                onFocus={e => e.target.select()}
+          {/* Action A: Save image to Photos */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#7B5EA7', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+              ① 儲存圖片到相簿
+            </div>
+            {previewUrl ? (
+              <a
+                href={previewUrl}
+                download={imageFile?.name || 'recipe.jpg'}
+                onClick={() => setImageSaved(true)}
                 style={{
-                  width: '100%', marginTop: 8, fontFamily: 'monospace', fontSize: 10,
-                  borderRadius: 8, border: '1px solid #e0d0a0', padding: 8,
-                  background: '#fffdf5', resize: 'none', color: '#555',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '11px 0', borderRadius: 12, textDecoration: 'none',
+                  background: imageSaved ? '#2E7D52' : '#4A2C5E',
+                  color: 'white', fontWeight: 800, fontSize: 13,
                 }}
-              />
+              >
+                {imageSaved ? '✓ 圖片已儲存到相簿' : '📥 長按儲存 / 點擊下載圖片'}
+              </a>
+            ) : (
+              <div style={{ padding: '11px 0', textAlign: 'center', color: '#aaa', fontSize: 13, background: '#f5f5f5', borderRadius: 12 }}>
+                請先選擇圖片
+              </div>
+            )}
+            <div style={{ fontSize: 10, color: '#aaa', marginTop: 5, lineHeight: 1.5 }}>
+              💡 iPad：點擊後會下載到「檔案」，也可長按圖片預覽選「加入照片」
             </div>
-          )}
+          </div>
 
-          {/* Already shared — remind user to come back */}
-          {(shareStatus === 'done') && (
-            <div style={{ marginTop: 10, padding: 12, background: '#E8F8EE', borderRadius: 10, fontSize: 12, color: '#1C5E3A', lineHeight: 1.7 }}>
-              ✅ Gemini 正在分析您的圖片。分析完成後，複製全部 JSON 文字回到這裡貼入步驟 3。
+          {/* Divider */}
+          <div style={{ height: 1, background: '#f0ece6', margin: '4px 0 12px' }} />
+
+          {/* Action B: Copy prompt */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#7B5EA7', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+              ② 複製提示詞
             </div>
-          )}
+            {/* Prompt preview */}
+            <div style={{
+              background: '#1a1a2e', borderRadius: 10, padding: 10, marginBottom: 8,
+              fontSize: 10, color: '#adb5bd', fontFamily: 'monospace',
+              lineHeight: 1.5, maxHeight: 70, overflow: 'hidden', position: 'relative',
+            }}>
+              {ULTRA_PROMPT.slice(0, 160)}...
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(transparent, #1a1a2e)' }} />
+            </div>
+            <textarea id="ub-prompt-hidden" readOnly value={ULTRA_PROMPT} style={{ position: 'absolute', left: -9999, opacity: 0, height: 1 }} />
+            <button
+              onClick={copyPrompt}
+              disabled={!imageFile}
+              style={{
+                width: '100%', padding: '11px 0', border: 'none', borderRadius: 12,
+                background: promptCopied ? '#2E7D52' : !imageFile ? '#ddd' : '#B8860B',
+                color: !imageFile ? '#aaa' : 'white', fontWeight: 800, fontSize: 13,
+                cursor: !imageFile ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {promptCopied ? '✓ 提示詞已複製！' : '📋 複製提示詞'}
+            </button>
+          </div>
         </div>
 
-        {/* ── Step 4: Paste JSON ── */}
+        {/* ── Step 3: Open Gemini ── */}
+        <div style={cardStyle(3)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <StepBadge n={3} done={stepDone(3)} active={stepActive(3)} />
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800 }}>✨ 在 Gemini 辨識圖片</div>
+              <div style={{ fontSize: 11, color: '#888' }}>開啟 Gemini → 附加圖片 → 貼上提示詞 → 送出</div>
+            </div>
+          </div>
+
+          {/* Step-by-step instructions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {[
+              ['①', '開啟 Gemini Advanced', '點擊下方按鈕'],
+              ['②', '在 Gemini 中附加圖片', '點擊 📎 圖示 → 選「照片圖庫」→ 找到您剛才儲存的食譜圖片'],
+              ['③', '貼上提示詞', '在文字框長按 → 貼上（提示詞已複製）'],
+              ['④', '送出並複製 JSON', '等 Ultra 回覆後，長按全選回覆文字 → 複製'],
+            ].map(([n, title, desc]) => (
+              <div key={n} style={{ display: 'flex', gap: 10, padding: '8px 10px', background: '#F9F7FF', borderRadius: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#7B5EA7', flexShrink: 0 }}>{n}</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#2C1810' }}>{title}</div>
+                  <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <a
+            href="https://gemini.google.com"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => { if (!promptCopied) copyPrompt(); }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '13px 0', borderRadius: 13, textDecoration: 'none',
+              background: activeStep < 2 ? '#ddd' : 'linear-gradient(135deg, #2C1810, #4A2C5E)',
+              color: 'white', fontWeight: 900, fontSize: 15,
+              pointerEvents: activeStep < 2 ? 'none' : 'auto',
+            }}
+          >
+            ✨ 開啟 Gemini Advanced
+          </a>
+          <div style={{ marginTop: 6, textAlign: 'center', fontSize: 10, color: '#aaa' }}>
+            開啟時會自動再次複製提示詞
+          </div>
+        </div>
         <div style={cardStyle(4)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <StepBadge n={4} done={stepDone(4)} active={!stepDone(4) && activeStep >= 3} />
