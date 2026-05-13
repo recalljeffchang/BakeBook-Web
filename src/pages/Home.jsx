@@ -4,6 +4,7 @@ import { Search, Settings as SettingsIcon, SlidersHorizontal, X, Clock as ClockI
 import { useApp } from '../context/AppContext';
 import { greeting, RECIPE_CATEGORIES } from '../data/models';
 import { RecipeCardRow } from '../components/UI';
+import LoginBanner from '../components/LoginBanner';
 import {
   searchRecipes,
   getSearchHistory,
@@ -109,6 +110,11 @@ export default function Home({ onNavigate, onOpenSettings }) {
         <div style={{ fontSize: 26, fontWeight: 900, color: 'white', lineHeight: 1.25 }}>
           今天要做<br />什麼好料？
         </div>
+
+        {/* Cloud sync login banner */}
+        <LoginBanner />
+
+        <div style={{ height: 12 }} />
         <div className="search-bar">
           <Search size={16} color="#aaa" />
           <input

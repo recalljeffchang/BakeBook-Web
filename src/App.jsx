@@ -1,5 +1,6 @@
 // src/App.jsx
 import { useState } from 'react';
+import { AuthProvider } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
 import { Home as HomeIcon, BookOpen, Timer as TimerIcon, Camera, Leaf, Settings as SettingsIcon } from 'lucide-react';
 import Home from './pages/Home';
@@ -128,8 +129,10 @@ function AppShell() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppShell />
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <AppShell />
+      </AppProvider>
+    </AuthProvider>
   );
 }

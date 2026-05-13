@@ -1,8 +1,11 @@
 // src/pages/Settings.jsx
 import { useState } from 'react';
-import { Eye, EyeOff, CheckCircle, XCircle, Trash2, RefreshCw, Key, Database, Info, ChevronRight, Cpu, Zap } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle, XCircle, Trash2, RefreshCw, Key, Database, Info, ChevronRight, Cpu, Zap, Cloud } from 'lucide-react';
 import { BackButton } from '../components/UI';
 import { SAMPLE_RECIPES, SAMPLE_JOURNAL, SAMPLE_INVENTORY } from '../data/sampleData';
+import { useAuth } from '../context/AuthContext';
+import { useApp } from '../context/AppContext';
+import { saveAllToFirestore } from '../context/firestoreSync';
 
 // ─── All supported Gemini models ─────────────────────────────────────────────
 // eslint-disable-next-line react-refresh/only-export-components -- GEMINI_MODELS is intentionally co-exported for use by UploadRecipe
@@ -151,6 +154,130 @@ function StatusLabel({ status }) {
   return <span style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{s.text}</span>;
 }
 
+// ─── Cloud Sync Section ───────────────────────────────────────────────────────
+function CloudSyncSection() {
+  const { user, isLoggedIn, loginWithGoogle, logout } = useAuth();
+  const { syncStatus, lastSyncTime, recipes, journal, inventory } = useApp();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleManualSync = async () => {
+    if (!isLoggedIn || !user?.uid) return;
+    setIsSyncing(true);
+    try {
+      await saveAllToFirestore(user.uid, 'recipes', recipes);
+      await saveAllToFirestore(user.uid, 'journal', journal);
+      await saveAllToFirestore(user.uid, 'inventory', inventory);
+    } catch (err) {
+      console.error('Manual sync error:', err);
+    }
+    setIsSyncing(false);
+  };
+
+  return (
+    <div className="card">
+      <SectionHeader icon={Cloud} title="雲端同步" color="#4285F4" />
+
+      {isLoggedIn ? (
+        <>
+          {/* User info */}
+          <div style={{ background: '#E8F0FE', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {user.photoURL && (
+                <img src={user.photoURL} alt="" style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid #4285F4' }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#1a1a1a' }}>{user.displayName}</div>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 1 }}>{user.email}</div>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 8,
+                background: syncStatus === 'synced' ? '#E8F5E9' : '#FFF3E0',
+                color: syncStatus === 'synced' ? '#2E7D52' : '#EF9F27',
+              }}>
+                {syncStatus === 'syncing' ? '同步中...' : syncStatus === 'synced' ? '已同步 ✓' : '就緒'}
+              </span>
+            </div>
+            {lastSyncTime && (
+              <div style={{ fontSize: 11, color: '#888', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(66,133,244,0.15)' }}>
+                上次同步：{new Date(lastSyncTime).toLocaleString('zh-TW')}
+              </div>
+            )}
+          </div>
+
+          {/* Sync stats */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {[
+              ['📖', '食譜', recipes.length],
+              ['📓', '日誌', journal.length],
+              ['📦', '庫存', inventory.length],
+            ].map(([icon, label, count]) => (
+              <div key={label} style={{ flex: 1, textAlign: 'center', padding: '8px 0', background: '#F8F9FA', borderRadius: 10 }}>
+                <div style={{ fontSize: 16 }}>{icon}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: '#4285F4' }}>{count}</div>
+                <div style={{ fontSize: 10, color: '#888' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Manual sync */}
+          <button
+            onClick={handleManualSync}
+            disabled={isSyncing}
+            style={{
+              width: '100%', padding: '10px 0', marginBottom: 8,
+              background: isSyncing ? '#e8e4dd' : '#4285F4', color: isSyncing ? '#888' : 'white',
+              border: 'none', borderRadius: 12, fontWeight: 700, fontSize: 13,
+              cursor: isSyncing ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            }}
+          >
+            {isSyncing ? <><RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> 同步中...</> : '🔄 手動同步所有資料'}
+          </button>
+
+          <div className="divider" />
+          <RowItem label="登出 Google 帳號" onPress={logout} right={<ChevronRight size={14} color="#ccc" />} />
+
+          <div style={{ marginTop: 10, padding: 10, background: '#E8F0FE', borderRadius: 10, fontSize: 11, color: '#4285F4', lineHeight: 1.6 }}>
+            ☁️ 所有資料即時同步至 Firebase。在任何裝置登入同一帳號即可存取。
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>☁️</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: '#1a1a1a' }}>跨裝置雲端同步</div>
+            <div style={{ fontSize: 12, color: '#888', lineHeight: 1.6, marginBottom: 16 }}>
+              登入 Google 帳號即可將食譜、日誌、庫存資料<br />同步到所有裝置
+            </div>
+            <button
+              onClick={loginWithGoogle}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '12px 28px', background: 'white',
+                border: '2px solid #4285F4', borderRadius: 12,
+                color: '#333', fontSize: 14, fontWeight: 800,
+                cursor: 'pointer', fontFamily: 'inherit',
+                boxShadow: '0 2px 8px rgba(66,133,244,0.2)',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              使用 Google 帳號登入
+            </button>
+          </div>
+          <div style={{ marginTop: 8, padding: 10, background: '#F8F9FA', borderRadius: 10, fontSize: 11, color: '#888', lineHeight: 1.6 }}>
+            🔒 僅使用 Google OAuth 驗證身份，不存取您的任何 Google 資料。
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Settings({ onBack }) {
   // ── API Key ───────────────────────────────────────────────────────
@@ -243,6 +370,9 @@ export default function Settings({ onBack }) {
       </div>
 
       <div style={{ padding: '16px 18px 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+        {/* ─── Cloud Sync ─── */}
+        <CloudSyncSection />
 
         {/* ─── API Key ─── */}
         <div className="card">
