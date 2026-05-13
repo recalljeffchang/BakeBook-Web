@@ -159,78 +159,9 @@ export default function UploadRecipe({ onBack, onNavigate }) {
   const [errorMsg, setErrorMsg]     = useState('');
   const fileInputRef = useRef(null);
 
-  // Ultra JSON paste state
-  const [ultraRaw, setUltraRaw]     = useState('');
-  const [ultraParsed, setUltraParsed] = useState(null);
-  const [ultraError, setUltraError] = useState('');
-  const [copied, setCopied]         = useState(false);
 
-  const ULTRA_PROMPT = `你是一位專業的烘焙食譜辨識助手。請仔細分析我附上的這張圖片（食譜書、手寫食譜、截圖或食物照片），並準確提取所有資訊。
 
-請「只」以純 JSON 格式回覆，不要有任何 markdown 符號（不要 \`\`\`json）、不要任何解釋文字，直接輸出 JSON 物件：
-{
-  "name": "食譜名稱（繁體中文）",
-  "subtitle": "副標題或簡短描述（20字以內）",
-  "category": "麵包 或 蛋糕 或 餅乾 或 點心",
-  "difficulty": "入門 或 中等 或 進階",
-  "emoji": "最適合的食物 emoji（1個）",
-  "totalMinutes": 總製作時間分鐘（數字）,
-  "ovenTemp": "烤溫例如 170°C，不需要烤箱則填 無烤箱",
-  "bakeMinutes": 烘烤時間分鐘（數字，沒有則填 0）,
-  "servings": 份量數（數字）,
-  "description": "食譜特色描述（50字以內）",
-  "ingredients": [
-    { "name": "材料名稱", "amount": 數量, "unit": "g 或 ml 或 顆", "isBase": true 或 false }
-  ],
-  "steps": [
-    { "order": 步驟編號, "description": "步驟說明", "timerMinutes": null 或 計時分鐘數 }
-  ]
-}`;
 
-  const copyPrompt = () => {
-    navigator.clipboard.writeText(ULTRA_PROMPT).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  };
-
-  const parseUltraJson = (raw) => {
-    setUltraRaw(raw);
-    setUltraError('');
-    setUltraParsed(null);
-    if (!raw.trim()) return;
-    try {
-      const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-      const parsed = JSON.parse(cleaned);
-      if (!parsed.name) throw new Error('缺少 name 欄位');
-      setUltraParsed(parsed);
-    } catch (e) {
-      setUltraError(`JSON 格式錯誤：${e.message}`);
-    }
-  };
-
-  const saveUltra = () => {
-    if (!ultraParsed) return;
-    const recipe = {
-      id: uuid(),
-      name: ultraParsed.name || '無名食譜',
-      subtitle: ultraParsed.subtitle || '',
-      emoji: ultraParsed.emoji || '🍞',
-      category: ultraParsed.category || '點心',
-      difficulty: ultraParsed.difficulty || '入門',
-      totalMinutes: Number(ultraParsed.totalMinutes) || 60,
-      ovenTemp: ultraParsed.ovenTemp || '—',
-      bakeMinutes: Number(ultraParsed.bakeMinutes) || 0,
-      servings: Number(ultraParsed.servings) || 1,
-      description: ultraParsed.description || '',
-      isUserUploaded: true,
-      createdAt: new Date().toISOString(),
-      ingredients: (ultraParsed.ingredients || []).map((ing, i) => ({ ...ing, id: `u_ing_${i}` })),
-      steps: (ultraParsed.steps || []).map((s, i) => ({ ...s, id: `u_step_${i}` })),
-    };
-    dispatch({ type: 'ADD_RECIPE', payload: recipe });
-    onBack();
-  };
 
   // Manual form state
   const [name, setName] = useState('');
@@ -308,9 +239,6 @@ export default function UploadRecipe({ onBack, onNavigate }) {
     }
   };
 
-  const retryWithFile = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
-  };
 
   const saveAI = () => {
     if (!aiResult) return;

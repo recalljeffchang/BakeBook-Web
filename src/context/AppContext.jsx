@@ -12,7 +12,7 @@ const loadLS = (key, fallback) => {
 };
 
 const saveLS = (key, val) => {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {} // eslint-disable-line no-empty -- localStorage may be full/unavailable
 };
 
 const initialState = {
@@ -144,4 +144,5 @@ export function AppProvider({ children }) {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- useApp hook intentionally co-exported with AppProvider
 export const useApp = () => useContext(AppContext);

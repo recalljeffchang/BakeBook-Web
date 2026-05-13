@@ -1,9 +1,8 @@
 // src/components/UI.jsx
 // Shared UI components — mirrors DesignSystem.swift
 
-import { useState } from 'react';
 import { Clock, Thermometer } from 'lucide-react';
-import { DIFFICULTIES, formatAmount, formatTime } from '../data/models';
+import { DIFFICULTIES, formatTime } from '../data/models';
 import HighlightText from './HighlightText';
 
 export function TagBadge({ text, bg, color }) {

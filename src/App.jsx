@@ -102,7 +102,7 @@ function AppShell() {
       {/* Tab bar — hidden when any overlay is open */}
       {stack.length === 0 && !showSettings && !showTimerModal && (
         <nav className="tab-bar">
-          {TABS.map(({ key, label, Icon, color }) => {
+          {TABS.map(({ key, label, Icon: TabIcon, color }) => {
             const active = tab === key;
             const showBadge = key === 'inventory' && lowStockItems.length > 0;
             return (
@@ -113,7 +113,7 @@ function AppShell() {
                 onClick={() => setTab(key)}
               >
                 <div style={{ position: 'relative' }}>
-                  <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+                  <TabIcon size={22} strokeWidth={active ? 2.5 : 2} />
                   {showBadge && <div className="tab-badge" />}
                 </div>
                 <span className="tab-label" style={{ color: active ? color : '#aaa' }}>{label}</span>

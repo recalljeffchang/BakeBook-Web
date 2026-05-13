@@ -1,6 +1,6 @@
 // src/pages/InventoryDetail.jsx
-import { useApp } from '../context/AppContext';
-import { stockStatus, STOCK_STATUS_META, CATEGORY_BG, displayStock, formatAmount } from '../data/models';
+import { useMemo } from 'react';
+import { stockStatus, STOCK_STATUS_META, CATEGORY_BG, formatAmount } from '../data/models';
 import { SectionLabel, ProgressBar, EmojiCircle, TagBadge } from '../components/UI';
 
 function formatDate(iso) {
@@ -13,7 +13,11 @@ export default function InventoryDetail({ item, onClose }) {
   const pct = item.initialStock > 0 ? Math.min(item.currentStock / item.initialStock, 1) : 0;
   const unitCost = item.initialStock > 0 ? item.purchasePrice / item.initialStock : 0;
   const shortage = Math.max(0, item.minimumThreshold - item.currentStock);
-  const isExpiringSoon = item.expiryDate && new Date(item.expiryDate) < new Date(Date.now() + 7 * 86400000);
+  const isExpiringSoon = useMemo(() => {
+    if (!item.expiryDate) return false;
+    const now = Date.now();
+    return new Date(item.expiryDate) < new Date(now + 7 * 86400000);
+  }, [item.expiryDate]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>

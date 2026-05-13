@@ -1,5 +1,5 @@
 // src/pages/Timer.jsx
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { RotateCcw, Play, Pause } from 'lucide-react';
 
 const PRESETS = [

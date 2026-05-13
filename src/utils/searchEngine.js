@@ -162,13 +162,13 @@ export function addSearchHistory(query) {
 
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  } catch {}
+  } catch {} // eslint-disable-line no-empty -- localStorage may be unavailable
 }
 
 export function clearSearchHistory() {
   try {
     localStorage.removeItem(HISTORY_KEY);
-  } catch {}
+  } catch {} // eslint-disable-line no-empty -- localStorage may be unavailable
 }
 
 // ── Time filter presets ──

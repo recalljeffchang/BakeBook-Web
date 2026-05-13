@@ -5,6 +5,7 @@ import { BackButton } from '../components/UI';
 import { SAMPLE_RECIPES, SAMPLE_JOURNAL, SAMPLE_INVENTORY } from '../data/sampleData';
 
 // ─── All supported Gemini models ─────────────────────────────────────────────
+// eslint-disable-next-line react-refresh/only-export-components -- GEMINI_MODELS is intentionally co-exported for use by UploadRecipe
 export const GEMINI_MODELS = [
   // ── Ultra / Pro tier (Gemini Advanced subscription or paid API) ──────────
   {
@@ -105,11 +106,11 @@ async function pingModel(apiKey, modelId) {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-function SectionHeader({ icon: Icon, title, color }) {
+function SectionHeader({ icon: IconComponent, title, color }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0 10px' }}>
       <div style={{ width: 32, height: 32, borderRadius: 10, background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={16} color={color} />
+        <IconComponent size={16} color={color} />
       </div>
       <span style={{ fontSize: 15, fontWeight: 800, color: '#1a1a1a' }}>{title}</span>
     </div>

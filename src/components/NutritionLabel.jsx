@@ -1,3 +1,4 @@
+/* eslint-disable no-irregular-whitespace -- CJK full-width spaces used for label alignment per Taiwan food regulation format */
 // src/components/NutritionLabel.jsx
 // 依據食藥署「包裝食品營養標示應遵行事項」格式
 // Reference: 食品標示法規指引手冊
@@ -60,7 +61,7 @@ function NRow({ label, value, unit, pct, indent, bold, borderTop }) {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────
-export default function NutritionLabel({ data, recipeName, ingredients, servings, netWeight }) {
+export default function NutritionLabel({ data, recipeName, ingredients, netWeight }) {
   if (!data) return null;
 
   const { servingSize, servingsPerContainer, perServing } = data;

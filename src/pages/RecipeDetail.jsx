@@ -1,5 +1,5 @@
-﻿// src/pages/RecipeDetail.jsx
-import { useState } from 'react';
+// src/pages/RecipeDetail.jsx
+import { useState, useEffect } from 'react';
 import { Timer as TimerIcon, AlertTriangle, Camera, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatAmount, formatTime } from '../data/models';
@@ -54,6 +54,14 @@ export default function RecipeDetail({ recipeId, onBack, onOpenTimer }) {
   const sliderInitial = recipe?.ingredients[0]?.amount || 100;
   const [sliderValue, setSliderValue] = useState(sliderInitial);
   const ratio = baseIng.amount > 0 ? sliderValue / baseIng.amount : 1;
+
+  // Sync sliderValue when recipe's base ingredient amount changes (e.g. after editing)
+  const currentBaseAmount = recipe?.ingredients[safeBaseIdx]?.amount;
+  useEffect(() => {
+    if (currentBaseAmount !== undefined) {
+      setSliderValue(currentBaseAmount);
+    }
+  }, [currentBaseAmount]);
 
   // 必須在所有 hooks 後才能做 early return
   if (!recipe) return null;
@@ -214,7 +222,7 @@ export default function RecipeDetail({ recipeId, onBack, onOpenTimer }) {
           onClick={() => setShowDeleteConfirm(true)}
           style={{
             position: 'absolute',
-            top: ` calc(env(safe-area-inset-top, 0px) + 52px) `,
+            top: `calc(env(safe-area-inset-top, 0px) + 52px)`,
             right: 16,
             background: 'rgba(226,75,74,0.85)',
             border: 'none', color: 'white',
@@ -655,7 +663,6 @@ export default function RecipeDetail({ recipeId, onBack, onOpenTimer }) {
                     data={nutritionData}
                     recipeName={recipe.name}
                     ingredients={recipe.ingredients.map(i => i.name).join('、')}
-                    servings={piecesPerPkg}
                     netWeight={perPkgWeight}
                   />
                 </div>
