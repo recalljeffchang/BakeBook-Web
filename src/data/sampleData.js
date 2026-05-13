@@ -23,12 +23,14 @@ export const SAMPLE_RECIPES = [
     isUserUploaded: false,
     createdAt: d(30),
     ingredients: [
-      { id: 'i1', name: '高筋麵粉', amount: 500, unit: 'g', isBase: true },
-      { id: 'i2', name: '溫水',     amount: 360, unit: 'ml', isBase: false },
-      { id: 'i3', name: '老麵種',   amount: 100, unit: 'g',  isBase: false },
-      { id: 'i4', name: '鹽',       amount: 10,  unit: 'g',  isBase: false },
-      { id: 'i5', name: '橄欖油',   amount: 15,  unit: 'ml', isBase: false },
-      { id: 'i6', name: '麥芽精',   amount: 5,   unit: 'g',  isBase: false },
+      // ── 主麵團 ──
+      { id: 'i1', name: '高筋麵粉', amount: 500, unit: 'g', isBase: true,  group: '主麵團' },
+      { id: 'i2', name: '溫水',     amount: 360, unit: 'ml', isBase: false, group: '主麵團' },
+      { id: 'i4', name: '鹽',       amount: 10,  unit: 'g',  isBase: false, group: '主麵團' },
+      { id: 'i5', name: '橄欖油',   amount: 15,  unit: 'ml', isBase: false, group: '主麵團' },
+      { id: 'i6', name: '麥芽精',   amount: 5,   unit: 'g',  isBase: false, group: '主麵團' },
+      // ── 老麵種 ──
+      { id: 'i3', name: '老麵種',   amount: 100, unit: 'g',  isBase: false, group: '老麵種' },
     ],
     steps: [
       { id: 's1', order: 1, description: '將高筋麵粉、鹽、老麵種與溫水混合，揉至光滑有彈性，約 10 分鐘。', timerMinutes: null },
@@ -52,12 +54,15 @@ export const SAMPLE_RECIPES = [
     isUserUploaded: false,
     createdAt: d(20),
     ingredients: [
-      { id: 'i7',  name: '低筋麵粉', amount: 100, unit: 'g',  isBase: true },
-      { id: 'i8',  name: '雞蛋',     amount: 3,   unit: '顆', isBase: false },
-      { id: 'i9',  name: '牛奶',     amount: 400, unit: 'ml', isBase: false },
-      { id: 'i10', name: '細砂糖',   amount: 50,  unit: 'g',  isBase: false },
-      { id: 'i11', name: '無鹽奶油', amount: 30,  unit: 'g',  isBase: false },
-      { id: 'i12', name: '草莓',     amount: 200, unit: 'g',  isBase: false },
+      // ── 餅皮 ──
+      { id: 'i7',  name: '低筋麵粉', amount: 100, unit: 'g',  isBase: true,  group: '餅皮' },
+      { id: 'i8',  name: '雞蛋',     amount: 3,   unit: '顆', isBase: false, group: '餅皮' },
+      { id: 'i9',  name: '牛奶',     amount: 400, unit: 'ml', isBase: false, group: '餅皮' },
+      { id: 'i11', name: '無鹽奶油', amount: 30,  unit: 'g',  isBase: false, group: '餅皮' },
+      // ── 卡士達奶油 ──
+      { id: 'i10', name: '細砂糖',   amount: 50,  unit: 'g',  isBase: false, group: '卡士達奶油' },
+      // ── 裝飾 ──
+      { id: 'i12', name: '草莓',     amount: 200, unit: 'g',  isBase: false, group: '裝飾' },
     ],
     steps: [
       { id: 's5', order: 1, description: '將雞蛋、糖、麵粉、牛奶攪拌均勻成無顆粒麵糊，靜置 30 分鐘。', timerMinutes: 30 },
@@ -81,12 +86,14 @@ export const SAMPLE_RECIPES = [
     isUserUploaded: false,
     createdAt: d(10),
     ingredients: [
-      { id: 'i13', name: '中筋麵粉',   amount: 300, unit: 'g', isBase: true },
-      { id: 'i14', name: '即溶酵母粉', amount: 4,   unit: 'g', isBase: false },
-      { id: 'i15', name: '細砂糖',     amount: 30,  unit: 'g', isBase: false },
-      { id: 'i16', name: '溫水',       amount: 160, unit: 'ml', isBase: false },
-      { id: 'i17', name: '抹茶粉',     amount: 10,  unit: 'g', isBase: false },
-      { id: 'i18', name: '蜜紅豆',     amount: 200, unit: 'g', isBase: false },
+      // ── 麵團 ──
+      { id: 'i13', name: '中筋麵粉',   amount: 300, unit: 'g',  isBase: true,  group: '麵團' },
+      { id: 'i14', name: '即溶酵母粉', amount: 4,   unit: 'g',  isBase: false, group: '麵團' },
+      { id: 'i15', name: '細砂糖',     amount: 30,  unit: 'g',  isBase: false, group: '麵團' },
+      { id: 'i16', name: '溫水',       amount: 160, unit: 'ml', isBase: false, group: '麵團' },
+      { id: 'i17', name: '抹茶粉',     amount: 10,  unit: 'g',  isBase: false, group: '麵團' },
+      // ── 內餡 ──
+      { id: 'i18', name: '蜜紅豆',     amount: 200, unit: 'g',  isBase: false, group: '內餡' },
     ],
     steps: [
       { id: 's9',  order: 1, description: '麵粉、酵母、糖、抹茶粉混合，加入溫水揉成光滑麵團。', timerMinutes: null },
